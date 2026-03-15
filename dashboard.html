@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spatial Audio Analysis</title>
+<style>
+@font-face {
+  font-family: 'Balenciaga';
+  src: url('https://db.onlinewebfonts.com/t/2596224269702968a53f20e3bc4c7ad4.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+:root {
+  --b: #000;
+  --w: #fff;
+  --g: #888;
+  --g2: #333;
+  --g3: #1a1a1a;
+  --g4: #111;
+}
+
+* { margin:0; padding:0; box-sizing:border-box }
+
+body {
+  background: var(--b);
+  color: var(--w);
+  font-family: 'Balenciaga', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: .5px;
+}
+
+::selection { background: var(--w); color: var(--b) }
+
+/* ── Upload ── */
+.upload {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.upload.off { display: none }
+.upload h1 {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  margin-bottom: 48px;
+  color: var(--g);
+}
+.upload .box {
+  width: 320px;
+  border: 1px solid var(--g2);
+  padding: 28px;
+  text-align: center;
+  transition: border-color .3s;
+}
+.upload .box:hover,
+.upload .box.dragover { border-color: var(--w) }
+.upload .box p {
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--g);
+}
+.upload .box span {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--g2);
+  margin-top: 12px;
+}
+
+/* ── Top ── */
+.top {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 48px;
+  border-bottom: 1px solid var(--g3);
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--b);
+}
+.top.on { display: flex }
+.top-l { color: var(--g) }
+.top-r { display: flex; align-items: center; gap: 20px; color: var(--g2) }
+.top-r b { color: var(--g); font-weight: 400 }
+
+/* ── Transport ── */
+.tr {
+  display: none;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 48px;
+  border-bottom: 1px solid var(--g3);
+}
+.tr.on { display: flex }
+
+.play {
+  width: 32px; height: 32px;
+  border: 1px solid var(--g2);
+  background: none; color: var(--w);
+  font-size: 10px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+}
+.play:hover { border-color: var(--w) }
+.play.on { background: var(--w); color: var(--b) }
+
+.stop {
+  width: 24px; height: 24px;
+  border: 1px solid var(--g3);
+  background: none; color: var(--g2);
+  font-size: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+}
+.stop:hover { border-color: var(--g2); color: var(--g) }
+
+.tc {
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--g); min-width: 110px;
+  font-variant-numeric: tabular-nums;
+}
+.tc .d { color: var(--g2) }
+
+.sk {
+  flex: 1; height: 1px;
+  background: var(--g3);
+  cursor: pointer;
+  position: relative;
+}
+.sk:hover { height: 2px }
+.sf { height: 100%; width: 0%; background: var(--w); transition: width .05s linear }
+
+.vr {
+  display: flex; align-items: center; gap: 6px;
+}
+.vr label { font-size: 8px; letter-spacing: 2px; color: var(--g2); text-transform: uppercase }
+.vr input[type=range] {
+  -webkit-appearance: none; width: 48px; height: 1px;
+  background: var(--g3); outline: none;
+}
+.vr input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 8px; height: 8px;
+  background: var(--g); border-radius: 0; cursor: pointer;
+}
+.vr input::-webkit-slider-thumb:hover { background: var(--w) }
+
+/* ── Main ── */
+.main { display: none; height: calc(100vh - 98px) }
+.main.on { display: flex }
+
+.main-left {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 36px 48px;
+  border-right: 1px solid var(--g3);
+}
+
+/* Chat */
+.chat {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.chat-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--g3);
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--g2);
+}
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.chat-body::-webkit-scrollbar { width: 0 }
+.msg {
+  margin-bottom: 20px;
+}
+.msg-role {
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--g2);
+  margin-bottom: 6px;
+}
+.msg-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--g);
+  letter-spacing: 0;
+}
+.msg.user .msg-text { color: var(--w) }
+.msg.ai .msg-text { color: var(--g) }
+.chat-input-wrap {
+  padding: 12px 16px;
+  border-top: 1px solid var(--g3);
+  display: flex;
+  gap: 6px;
+}
+.chat-input {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--g2);
+  color: var(--w);
+  font-family: 'Balenciaga', 'Helvetica Neue', sans-serif;
+  font-size: 11px;
+  letter-spacing: .5px;
+  padding: 0 14px;
+  height: 30px;
+  outline: none;
+  transition: border-color .2s;
+}
+.chat-input::placeholder { color: var(--g2) }
+.chat-input:focus { border-color: var(--w) }
+.chat-send {
+  width: 30px; height: 30px;
+  border: 1px solid var(--g2);
+  background: none; color: var(--g);
+  font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+}
+.chat-send:hover { border-color: var(--w); color: var(--w) }
+/* Chat actions */
+.chat-actions {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid var(--g3);
+}
+.btn-row {
+  display: flex;
+  gap: 6px;
+}
+.btn-row .chat-act { flex: 1; justify-content: center; }
+.chat-act {
+  font-family: 'Balenciaga', 'Helvetica Neue', sans-serif;
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--g2);
+  background: none;
+  border: 1px solid var(--g3);
+  padding: 6px 10px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all .2s;
+}
+.chat-act:hover { border-color: var(--g); color: var(--g) }
+.chat-act.full { border-color: var(--g2); color: var(--g) }
+.chat-act.full:hover { border-color: var(--w); color: var(--w) }
+.chat-act:disabled { opacity: .3; cursor: default }
+
+.prompt-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+.prompt-input {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--g3);
+  color: var(--w);
+  font-family: 'Balenciaga', 'Helvetica Neue', sans-serif;
+  font-size: 9px;
+  letter-spacing: .5px;
+  padding: 6px 10px;
+  height: 30px;
+  outline: none;
+  transition: border-color .2s;
+}
+.prompt-input::placeholder { color: var(--g2); font-size: 8px }
+.prompt-input:focus { border-color: var(--g) }
+
+/* Generated images in chat */
+.msg-img {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid var(--g3);
+  display: block;
+}
+.msg-imgs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  margin-top: 8px;
+}
+.msg-imgs img {
+  width: 100%;
+  border: 1px solid var(--g3);
+  display: block;
+}
+.msg-label {
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: var(--g2);
+  text-transform: uppercase;
+  margin-top: 2px;
+  text-align: center;
+}
+
+/* Image modal */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,.92);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+.modal.on { display: flex }
+.modal img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border: 1px solid var(--g3);
+}
+.modal-close {
+  position: absolute;
+  top: 20px; right: 24px;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--g2);
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.typing { color: var(--g2); font-size: 11px; letter-spacing: 0 }
+.typing::after {
+  content: '...';
+  animation: dots 1.2s steps(4) infinite;
+}
+@keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
+
+/* Stats */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--g3);
+  margin-bottom: 28px;
+}
+.st {
+  padding: 24px 20px;
+  border-right: 1px solid var(--g3);
+}
+.st:last-child { border-right: none }
+.st-l {
+  font-size: 8px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--g2);
+  margin-bottom: 12px;
+}
+.st-v {
+  font-size: 22px; font-weight: 400;
+  letter-spacing: 0;
+  color: var(--w);
+  line-height: 1;
+}
+.st-u {
+  font-size: 9px; color: var(--g2);
+  letter-spacing: 1px; margin-left: 2px;
+}
+.st-s {
+  font-size: 8px; color: var(--g2);
+  letter-spacing: 2px; margin-top: 8px;
+  text-transform: uppercase;
+}
+
+/* Viz */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--g3);
+  border: 1px solid var(--g3);
+}
+.p {
+  background: var(--b);
+  padding: 20px 22px;
+}
+.p.w { grid-column: 1 / -1 }
+.p-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.p-n {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--g);
+}
+.p-t {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--g2);
+  text-transform: uppercase;
+}
+canvas { width: 100%; display: block }
+
+/* Footer */
+.ft {
+  padding: 28px 48px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--g2);
+}
+
+@media (max-width: 1024px) {
+  .main { flex-direction: column; height: auto }
+  .main-left { border-right: none; border-bottom: 1px solid var(--g3) }
+  .chat { width: 100%; height: 400px }
+}
+@media (max-width: 768px) {
+  .stats { grid-template-columns: repeat(2, 1fr) }
+  .grid { grid-template-columns: 1fr }
+  .p.w { grid-column: 1 }
+  .top-r { display: none }
+  .main-left { padding: 20px }
+}
+</style>
+</head>
+<body>
+
+<section class="upload" id="up">
+  <h1>Spatial Audio Analysis</h1>
+  <div class="box" id="dropZone">
+    <p>Upload File</p>
+    <span>Wav · Flac · Ogg · Mp3</span>
+  </div>
+</section>
+<input type="file" id="fi" accept="audio/*" style="display:none">
+
+<div class="top" id="top">
+  <div class="top-l" id="metaFile"></div>
+  <div class="top-r">
+    <span><b id="metaChannels">—</b> Ch</span>
+    <span><b id="metaSR">—</b> Hz</span>
+    <span id="statusDot"></span>
+  </div>
+</div>
+
+<div class="tr" id="transport">
+  <button class="play" id="playBtn">▶</button>
+  <button class="stop" id="stopBtn">■</button>
+  <div class="tc"><span id="timeCurrent">0:00.0</span><span class="d"> / </span><span id="timeDuration">0:00.0</span></div>
+  <div class="sk" id="seekTrack"><div class="sf" id="seekFill"></div></div>
+  <div class="vr"><label>Vol</label><input type="range" id="volSlider" min="0" max="1" step=".01" value=".8"></div>
+</div>
+
+<div class="main" id="main">
+
+  <div class="main-left">
+    <div class="stats">
+      <div class="st"><div class="st-l">Onset</div><div class="st-v"><span id="statOnset">—</span><span class="st-u">/s</span></div></div>
+      <div class="st"><div class="st-l">Range</div><div class="st-v"><span id="statDR">—</span><span class="st-u">dB</span></div></div>
+      <div class="st"><div class="st-l">Entropy</div><div class="st-v"><span id="statEntropy">—</span></div><div class="st-s" id="statEntropyType">—</div></div>
+      <div class="st"><div class="st-l">RT60</div><div class="st-v"><span id="statRT60">—</span><span class="st-u">s</span></div></div>
+      <div class="st"><div class="st-l">Enclosure</div><div class="st-v" style="font-size:13px;letter-spacing:1px"><span id="statEnclosure">—</span></div></div>
+      <div class="st"><div class="st-l">L · M · H</div><div class="st-v" style="font-size:13px"><span id="statLow">—</span> · <span id="statMid">—</span> · <span id="statHigh">—</span><span class="st-u">%</span></div></div>
+    </div>
+
+    <div class="grid">
+      <div class="p"><div class="p-h"><span class="p-n">Stereo</span><span class="p-t">L/R</span></div><canvas id="cvsStereo" height="140"></canvas></div>
+      <div class="p"><div class="p-h"><span class="p-n">Loudness</span><span class="p-t">dB</span></div><canvas id="cvsLoudness" height="140"></canvas></div>
+      <div class="p"><div class="p-h"><span class="p-n">Spectrum</span><span class="p-t">Freq</span></div><canvas id="cvsFreq" height="140"></canvas></div>
+      <div class="p"><div class="p-h"><span class="p-n">Radial</span><span class="p-t">Polar</span></div><canvas id="cvsRadial" height="140"></canvas></div>
+      <div class="p w"><div class="p-h"><span class="p-n">Spectrogram</span><span class="p-t">F×T</span></div><canvas id="cvsSpectrogram" height="120"></canvas></div>
+      <div class="p w"><div class="p-h"><span class="p-n">Waveform</span><span class="p-t">Time</span></div><canvas id="cvsWaveform" height="80"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chat">
+    <div class="chat-head">Interpreter</div>
+    <div class="chat-actions" id="chatActions">
+      <div class="btn-row">
+        <button class="chat-act" onclick="runPipeline('predict')">Predict</button>
+        <button class="chat-act" onclick="runPipeline('interpret')">Interpret</button>
+        <button class="chat-act full" onclick="runPipeline('full',{method:'gpt-image',single:true})">Full-Image</button>
+      </div>
+      <div class="btn-row">
+        <input class="prompt-input" id="imgPrompt" type="text" placeholder="Custom prompt or leave empty for auto..." autocomplete="off">
+        <button class="chat-act" style="flex:none" onclick="genWithPrompt('gpt-image')">Generate</button>
+      </div>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="msg ai">
+        <div class="msg-role">System</div>
+        <div class="msg-text">Upload audio to begin. Use the buttons above to run pipeline stages, or ask questions below.</div>
+      </div>
+    </div>
+    <div class="chat-input-wrap">
+      <input class="chat-input" id="chatInput" type="text" placeholder="Ask about this sound..." autocomplete="off">
+      <button class="chat-send" id="chatSend">→</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal" id="imgModal" onclick="this.classList.remove('on')">
+  <span class="modal-close">Close</span>
+  <img id="modalImg" src="">
+</div>
+
+<footer class="ft"><span>Sci-Arc AAS 2025</span><span>Spatial Analysis</span></footer>
+
+<script>
+const AUDIO_B64="";
+let audioCtx,aL,aR,gain,src,buf,playing=false,t0=0,off=0;
+let specH=[],lHL=[],lHR=[];
+const SC=500,LH=120,cvs={},cx={};
+const ids=['cvsWaveform','cvsFreq','cvsRadial','cvsSpectrogram','cvsStereo','cvsLoudness'];
+function ic(){ids.forEach(id=>{cvs[id]=document.getElementById(id);cx[id]=cvs[id].getContext('2d')})}
+function sz(id){const c=cvs[id],d=devicePixelRatio||1,r=c.getBoundingClientRect();c.width=r.width*d;c.height=r.height*d;cx[id].setTransform(d,0,0,d,0,0);return{w:r.width,h:r.height}}
+function ia(){audioCtx=new(window.AudioContext||window.webkitAudioContext)();aL=audioCtx.createAnalyser();aR=audioCtx.createAnalyser();aL.fftSize=4096;aR.fftSize=4096;aL.smoothingTimeConstant=.82;aR.smoothingTimeConstant=.82;gain=audioCtx.createGain();gain.gain.value=.8}
+async function lb(ab){if(!audioCtx)ia();buf=await audioCtx.decodeAudioData(ab);off=0;specH=[];lHL=[];lHR=[];document.getElementById('up').classList.add('off');document.getElementById('top').classList.add('on');document.getElementById('transport').classList.add('on');document.getElementById('main').classList.add('on');document.getElementById('metaChannels').textContent=buf.numberOfChannels;document.getElementById('metaSR').textContent=buf.sampleRate;document.getElementById('timeDuration').textContent=ft(buf.duration);dw()}
+async function lb64(b){const s=atob(b),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);await lb(a.buffer)}
+function lf(f){
+  document.getElementById('metaFile').textContent=f.name.toUpperCase();
+  // Upload to server for full analysis (CLAP + librosa)
+  const fd=new FormData();fd.append('audio',f);
+  fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json()).then(data=>{
+    if(data.analysis) window._serverAnalysis=data.analysis;
+    if(data.clap_matches) window._clapMatches=data.clap_matches;
+    const cm=data.clap_matches;
+    if(cm&&cm.length){addMsg('ai','CLAP: '+cm.map(c=>c.description+' ('+c.similarity.toFixed(3)+')').join(', '));}
+  }).catch(()=>{});
+  // Also load in browser for playback
+  const r=new FileReader();r.onload=e=>lb(e.target.result);r.readAsArrayBuffer(f);
+}
+function play(){if(!buf)return;if(audioCtx.state==='suspended')audioCtx.resume();src=audioCtx.createBufferSource();src.buffer=buf;const sp=audioCtx.createChannelSplitter(buf.numberOfChannels);src.connect(sp);src.connect(gain);gain.connect(audioCtx.destination);sp.connect(aL,0);sp.connect(aR,Math.min(1,buf.numberOfChannels-1));src.start(0,off);t0=audioCtx.currentTime-off;playing=true;document.getElementById('playBtn').textContent='❚❚';document.getElementById('playBtn').classList.add('on');src.onended=()=>{if(playing)stp()};requestAnimationFrame(rl)}
+function pa(){if(!playing)return;off=audioCtx.currentTime-t0;src.onended=null;src.stop();playing=false;document.getElementById('playBtn').textContent='▶';document.getElementById('playBtn').classList.remove('on')}
+function stp(){if(playing){src.onended=null;src.stop()}playing=false;off=0;document.getElementById('playBtn').textContent='▶';document.getElementById('playBtn').classList.remove('on');ut();dw()}
+function tg(){playing?pa():play()}
+function sk(e){const r=document.getElementById('seekTrack').getBoundingClientRect();off=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*buf.duration;if(playing){src.onended=null;src.stop();play()}else ut()}
+function ft(s){return Math.floor(s/60)+':'+(s%60).toFixed(1).padStart(4,'0')}
+function ut(){const c=playing?audioCtx.currentTime-t0:off;document.getElementById('seekFill').style.width=(buf?(c/buf.duration)*100:0)+'%';document.getElementById('timeCurrent').textContent=ft(Math.max(0,c))}
+function st(){if(!buf)return;const d=buf.getChannelData(0),sr=buf.sampleRate,l=d.length,fs=2048;let rv=[];for(let i=0;i<l-fs;i+=fs){let s=0;for(let j=0;j<fs;j++)s+=d[i+j]**2;rv.push(Math.sqrt(s/fs))}const rdb=rv.map(v=>20*Math.log10(v+1e-10)),dr=Math.max(...rdb)-Math.min(...rdb);let z=0;for(let i=1;i<l;i++)if((d[i]>=0&&d[i-1]<0)||(d[i]<0&&d[i-1]>=0))z++;const od=(z/(l/sr))/200;const sl=d.slice(0,fs);let pw=new Float32Array(fs/2),tp=0;const bs=32;for(let b=0;b<fs/2;b+=bs){let s=0;for(let i=b;i<b+bs&&i<fs/2;i++)s+=Math.abs(sl[i]||0);pw[b/bs]=s;tp+=s}let en=0;const nb=Math.floor(fs/2/bs);for(let i=0;i<nb;i++){const p=pw[i]/(tp+1e-10);if(p>0)en-=p*Math.log2(p)}const ne=en/Math.log2(nb);let mx=0;for(let i=0;i<l;i++)mx=Math.max(mx,Math.abs(d[i]));let di=l;for(let i=Math.floor(l*.8);i<l;i++)if(Math.abs(d[i])<mx*.001){di=i;break}const rt=((l-di)/sr)*3;document.getElementById('statOnset').textContent=od.toFixed(2);document.getElementById('statDR').textContent=dr.toFixed(1);document.getElementById('statEntropy').textContent=ne.toFixed(3);document.getElementById('statEntropyType').textContent=ne>.7?'DIFFUSE':'TONAL';document.getElementById('statRT60').textContent=rt.toFixed(2);document.getElementById('statEnclosure').textContent=rt>1.5?'REVERBERANT':rt>.5?'ENCLOSED':rt>.15?'SEMI-OPEN':'OPEN';document.getElementById('statLow').textContent='—';document.getElementById('statMid').textContent='—';document.getElementById('statHigh').textContent='—'}
+
+// ═══ RENDER ═══
+const B='#000',G='#1a1a1a',W='#fff';
+
+function dw(){
+  const{w,h}=sz('cvsWaveform'),c=cx.cvsWaveform;c.fillStyle=B;c.fillRect(0,0,w,h);
+  const n=buf.numberOfChannels,ch=h/n;
+  for(let i=0;i<n;i++){
+    const d=buf.getChannelData(i),s=Math.max(1,Math.floor(d.length/w)),ym=ch*i+ch/2;
+    c.strokeStyle=G;c.lineWidth=.5;c.beginPath();c.moveTo(0,ym);c.lineTo(w,ym);c.stroke();
+    const a=i===0?.6:.3;c.strokeStyle=`rgba(255,255,255,${a})`;c.lineWidth=.5;c.beginPath();
+    for(let x=0;x<w;x++){let mn=1,mx=-1;const o=x*s;for(let j=0;j<s&&o+j<d.length;j++){const v=d[o+j];if(v<mn)mn=v;if(v>mx)mx=v}if(x===0)c.moveTo(x,ym+mn*ch*.44);c.lineTo(x,ym+mx*ch*.44);c.lineTo(x,ym+mn*ch*.44)}
+    c.stroke();
+  }
+}
+function dh(){
+  dw();const w=cvs.cvsWaveform.getBoundingClientRect().width,h=cvs.cvsWaveform.getBoundingClientRect().height,c=cx.cvsWaveform;
+  const x=(audioCtx.currentTime-t0)/buf.duration*w;
+  c.strokeStyle=W;c.lineWidth=1;c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke();
+}
+function df(){
+  const{w,h}=sz('cvsFreq'),c=cx.cvsFreq;c.fillStyle=B;c.fillRect(0,0,w,h);
+  const bl=aL.frequencyBinCount,dL=new Uint8Array(bl),dR=new Uint8Array(bl);aL.getByteFrequencyData(dL);aR.getByteFrequencyData(dR);
+  const bars=64,gap=2,bw=(w-(bars-1)*gap)/bars;
+  for(let i=0;i<bars;i++){
+    const idx=Math.min(Math.floor(Math.pow(i/bars,2.2)*bl*.7),bl-1),val=((dL[idx]+dR[idx])/2)/255,bh=val*h*.85,x=i*(bw+gap);
+    c.fillStyle=`rgba(255,255,255,${.08+val*.55})`;c.fillRect(x,h-bh,bw,bh);
+  }
+}
+function dr(){
+  const{w,h}=sz('cvsRadial'),c=cx.cvsRadial;c.fillStyle=B;c.fillRect(0,0,w,h);
+  const bl=aL.frequencyBinCount,data=new Uint8Array(bl);aL.getByteFrequencyData(data);
+  const cX=w/2,cY=h/2,mR=Math.min(cX,cY)*.8,iR=mR*.2,seg=100;
+  [.4,.6,.8].forEach(r=>{c.strokeStyle=G;c.lineWidth=.5;c.beginPath();c.arc(cX,cY,mR*r,0,Math.PI*2);c.stroke()});
+  for(let i=0;i<seg;i++){
+    const a=(i/seg)*Math.PI*2-Math.PI/2,idx=Math.min(Math.floor(Math.pow(i/seg,1.6)*bl*.55),bl-1),val=data[idx]/255;
+    const r2=iR+val*(mR-iR),x1=cX+Math.cos(a)*iR,y1=cY+Math.sin(a)*iR,x2=cX+Math.cos(a)*r2,y2=cY+Math.sin(a)*r2;
+    c.strokeStyle=`rgba(255,255,255,${.08+val*.7})`;c.lineWidth=1.5;c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();
+  }
+}
+function ds(){
+  const{w,h}=sz('cvsSpectrogram'),c=cx.cvsSpectrogram;
+  const bl=aL.frequencyBinCount,data=new Uint8Array(bl);aL.getByteFrequencyData(data);
+  specH.push(new Uint8Array(data));if(specH.length>SC)specH.shift();
+  c.fillStyle=B;c.fillRect(0,0,w,h);const cW=w/SC,rows=Math.min(bl,256);
+  for(let x=0;x<specH.length;x++){const col=specH[x];for(let y=0;y<rows;y++){const val=col[y]/255;if(val<.02)continue;const b=Math.floor(val*val*255);c.fillStyle=`rgb(${b},${b},${b})`;const py=h-(y/rows)*h;c.fillRect(x*cW,py-Math.max(.8,h/rows),Math.max(1,cW+.5),Math.max(.8,h/rows))}}
+}
+function dss(){
+  const{w,h}=sz('cvsStereo'),c=cx.cvsStereo;c.fillStyle='rgba(0,0,0,.3)';c.fillRect(0,0,w,h);
+  const cX=w/2,cY=h/2,rad=Math.min(cX,cY)*.75;
+  c.strokeStyle=G;c.lineWidth=.5;c.beginPath();c.moveTo(cX,0);c.lineTo(cX,h);c.moveTo(0,cY);c.lineTo(w,cY);c.stroke();
+  c.beginPath();c.arc(cX,cY,rad,0,Math.PI*2);c.stroke();
+  const bl=aL.fftSize,dL=new Float32Array(bl),dR=new Float32Array(bl);aL.getFloatTimeDomainData(dL);aR.getFloatTimeDomainData(dR);
+  for(let i=0;i<bl;i+=3){const x=cX+dL[i]*rad,y=cY-dR[i]*rad,d=Math.sqrt(dL[i]**2+dR[i]**2);c.fillStyle=`rgba(255,255,255,${Math.min(.5,.03+d*3)})`;c.fillRect(x-.5,y-.5,1.5,1.5)}
+  c.fillStyle='#333';c.font="9px sans-serif";c.fillText('L',5,cY-4);c.fillText('R',w-13,cY-4);
+}
+function dl(){
+  const{w,h}=sz('cvsLoudness'),c=cx.cvsLoudness;c.fillStyle=B;c.fillRect(0,0,w,h);
+  const bl=aL.fftSize,dL=new Float32Array(bl),dR=new Float32Array(bl);aL.getFloatTimeDomainData(dL);aR.getFloatTimeDomainData(dR);
+  let sL=0,sR=0;for(let i=0;i<bl;i++){sL+=dL[i]**2;sR+=dR[i]**2}
+  const dbL=20*Math.log10(Math.sqrt(sL/bl)+1e-10),dbR=20*Math.log10(Math.sqrt(sR/bl)+1e-10);
+  lHL.push(dbL);lHR.push(dbR);if(lHL.length>LH){lHL.shift();lHR.shift()}
+  const p={l:32,r:8,t:12,b:24},gw=w-p.l-p.r,gh=h-p.t-p.b;
+  c.strokeStyle=G;c.lineWidth=.5;c.fillStyle='#333';c.font="8px sans-serif";c.textAlign='right';
+  for(let db=0;db>=-60;db-=20){const y=p.t+gh*(1-(db+60)/60);c.beginPath();c.moveTo(p.l,y);c.lineTo(w-p.r,y);c.stroke();c.fillText(db+'',p.l-3,y+3)}c.textAlign='left';
+  const dd=(hist,al)=>{if(hist.length<2)return;c.strokeStyle=`rgba(255,255,255,${al})`;c.lineWidth=1;c.beginPath();for(let i=0;i<hist.length;i++){const x=p.l+(i/LH)*gw,y=p.t+gh*(1-(Math.max(-60,hist[i])+60)/60);i===0?c.moveTo(x,y):c.lineTo(x,y)}c.stroke()};
+  dd(lHL,.6);dd(lHR,.25);
+  c.fillStyle='rgba(255,255,255,.5)';c.font="9px sans-serif";c.fillText('L '+dbL.toFixed(1),p.l+4,h-7);c.fillStyle='rgba(255,255,255,.25)';c.fillText('R '+dbR.toFixed(1),p.l+gw*.5,h-7);
+}
+
+function rl(){if(!playing)return;ut();dh();df();dr();ds();dss();dl();liveStats();requestAnimationFrame(rl)}
+
+// ═══ LIVE STATS ═══
+let _lsFrame=0;
+function liveStats(){
+  // Update every 6 frames (~10Hz) to avoid thrashing DOM
+  if(++_lsFrame%6!==0||!aL)return;
+
+  const bl=aL.frequencyBinCount;
+  const fD=new Uint8Array(bl);
+  const tD=new Float32Array(aL.fftSize);
+  aL.getByteFrequencyData(fD);
+  aL.getFloatTimeDomainData(tD);
+  const len=tD.length, sr=buf.sampleRate;
+
+  // Onset density — zero-crossing rate as proxy
+  let zcr=0;
+  for(let i=1;i<len;i++) if((tD[i]>=0&&tD[i-1]<0)||(tD[i]<0&&tD[i-1]>=0)) zcr++;
+  const onsetD=(zcr/(len/sr))/200;
+  document.getElementById('statOnset').textContent=onsetD.toFixed(2);
+
+  // RMS + Dynamic Range
+  let sum=0,mn=1,mx=-1;
+  for(let i=0;i<len;i++){sum+=tD[i]**2;if(tD[i]<mn)mn=tD[i];if(tD[i]>mx)mx=tD[i]}
+  const rms=Math.sqrt(sum/len);
+  const rmsDb=20*Math.log10(rms+1e-10);
+  const peakDb=20*Math.log10(Math.max(Math.abs(mn),Math.abs(mx))+1e-10);
+  const dr=Math.abs(peakDb-rmsDb)*2;
+  document.getElementById('statDR').textContent=dr.toFixed(1);
+
+  // Spectral entropy
+  let totalP=0;
+  for(let i=0;i<bl;i++) totalP+=fD[i];
+  let ent=0;
+  if(totalP>0){
+    for(let i=0;i<bl;i++){const p=fD[i]/totalP;if(p>0)ent-=p*Math.log2(p+1e-10)}
+  }
+  const maxEnt=Math.log2(bl);
+  const normEnt=maxEnt>0?ent/maxEnt:0;
+  document.getElementById('statEntropy').textContent=normEnt.toFixed(3);
+  document.getElementById('statEntropyType').textContent=normEnt>.7?'DIFFUSE':'TONAL';
+
+  // RT60 — estimate from autocorrelation decay of current frame
+  let ac0=0,ac1=0;
+  const half=Math.floor(len/2);
+  for(let i=0;i<half;i++){ac0+=tD[i]*tD[i];ac1+=tD[i]*tD[i+1]}
+  const decay=ac0>0?ac1/ac0:0;
+  const rt60=decay>.99?2.0:-Math.log(0.001)/(sr*Math.max(0.0001,-Math.log(Math.abs(decay)+1e-10)));
+  const rt60c=Math.min(Math.max(rt60,0),5);
+  document.getElementById('statRT60').textContent=rt60c.toFixed(2);
+  document.getElementById('statEnclosure').textContent=rt60c>1.5?'REVERBERANT':rt60c>.5?'ENCLOSED':rt60c>.15?'SEMI-OPEN':'OPEN';
+
+  // Band energy — low/mid/high
+  const freqPerBin=sr/2/bl;
+  let lo=0,mi=0,hi=0;
+  for(let i=0;i<bl;i++){
+    const f=i*freqPerBin, v=fD[i]*fD[i];
+    if(f<300)lo+=v;else if(f<2000)mi+=v;else hi+=v;
+  }
+  const tot=lo+mi+hi+1e-10;
+  document.getElementById('statLow').textContent=Math.round(lo/tot*100);
+  document.getElementById('statMid').textContent=Math.round(mi/tot*100);
+  document.getElementById('statHigh').textContent=Math.round(hi/tot*100);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  ic();
+  const dz=document.getElementById('dropZone'),fi=document.getElementById('fi');
+  dz.addEventListener('click',()=>fi.click());
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover')});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files[0])lf(e.dataTransfer.files[0])});
+  fi.addEventListener('change',()=>{if(fi.files[0])lf(fi.files[0])});
+  document.getElementById('playBtn').addEventListener('click',tg);
+  document.getElementById('stopBtn').addEventListener('click',stp);
+  document.getElementById('seekTrack').addEventListener('click',sk);
+  document.getElementById('volSlider').addEventListener('input',e=>{if(gain)gain.gain.value=parseFloat(e.target.value)});
+  document.addEventListener('keydown',e=>{
+    if(e.code==='Space'&&document.activeElement!==document.getElementById('chatInput')){e.preventDefault();tg()}
+  });
+  window.addEventListener('resize',()=>{if(buf)dw()});
+  if(AUDIO_B64.length>100){document.getElementById('metaFile').textContent='EMBEDDED';lb64(AUDIO_B64)}
+
+  // ── Chat ──
+  const chatInput=document.getElementById('chatInput');
+  const chatSend=document.getElementById('chatSend');
+  const chatBody=document.getElementById('chatBody');
+
+  function getAnalysisContext(){
+    if(!buf) return 'No audio loaded.';
+    return `Audio: ${buf.numberOfChannels}ch, ${buf.sampleRate}Hz, ${buf.duration.toFixed(1)}s. `+
+      `Onset: ${document.getElementById('statOnset').textContent}/s. `+
+      `DR: ${document.getElementById('statDR').textContent}dB. `+
+      `Entropy: ${document.getElementById('statEntropy').textContent} (${document.getElementById('statEntropyType').textContent}). `+
+      `RT60: ${document.getElementById('statRT60').textContent}s. `+
+      `Enclosure: ${document.getElementById('statEnclosure').textContent}.`;
+  }
+
+  function addMsg(role, text){
+    const d=document.createElement('div');
+    d.className='msg '+role;
+    d.innerHTML=`<div class="msg-role">${role==='user'?'You':'Interpreter'}</div><div class="msg-text">${text}</div>`;
+    chatBody.appendChild(d);
+    chatBody.scrollTop=chatBody.scrollHeight;
+  }
+
+  function addTyping(){
+    const d=document.createElement('div');
+    d.className='msg ai';d.id='typing';
+    d.innerHTML='<div class="msg-role">Interpreter</div><div class="msg-text typing">Analyzing</div>';
+    chatBody.appendChild(d);
+    chatBody.scrollTop=chatBody.scrollHeight;
+  }
+  function removeTyping(){const t=document.getElementById('typing');if(t)t.remove();}
+
+  async function sendChat(){
+    const text=chatInput.value.trim();
+    if(!text) return;
+    chatInput.value='';
+    addMsg('user',text);
+    addTyping();
+
+    const ctx=getAnalysisContext();
+    const prompt=`You are a spatial audio analysis interpreter. Given this audio analysis data: ${ctx}\n\nUser question: ${text}\n\nRespond concisely (2-3 sentences max). Describe the acoustic environment, spatial characteristics, or scene interpretation based on the data. Be specific about what the numbers suggest about the physical space.`;
+
+    try {
+      const res = await fetch('/api/chat', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:256,
+          messages:[{role:'user',content:prompt}]
+        })
+      });
+      removeTyping();
+      if(res.ok){
+        const data=await res.json();
+        addMsg('ai',data.content[0].text);
+      } else {
+        // Fallback: local interpretation
+        localInterpret(text, ctx);
+      }
+    } catch(e) {
+      removeTyping();
+      localInterpret(text, ctx);
+    }
+  }
+
+  function localInterpret(q, ctx){
+    const onset=parseFloat(document.getElementById('statOnset').textContent)||0;
+    const dr=parseFloat(document.getElementById('statDR').textContent)||0;
+    const rt=parseFloat(document.getElementById('statRT60').textContent)||0;
+    const enc=document.getElementById('statEnclosure').textContent;
+    const ent=document.getElementById('statEntropyType').textContent;
+
+    let desc='Based on the analysis: ';
+    if(rt>1) desc+='High reverberation suggests a large enclosed space with reflective surfaces. ';
+    else if(rt>.3) desc+='Moderate reverb indicates an indoor environment with some acoustic absorption. ';
+    else desc+='Minimal reverb points to an open or well-dampened space. ';
+
+    if(onset>3) desc+='Dense event activity suggests a busy, active environment. ';
+    else if(onset>1) desc+='Moderate event density indicates periodic activity. ';
+    else desc+='Sparse events suggest a calm, ambient environment. ';
+
+    if(ent==='DIFFUSE') desc+='Diffuse spectral character implies broadband noise or ambient texture.';
+    else desc+='Tonal character suggests focused sound sources with distinct frequencies.';
+
+    addMsg('ai',desc);
+  }
+
+  // ── Custom prompt generation ──
+  window.genWithPrompt = async function(method) {
+    const prompt = document.getElementById('imgPrompt').value.trim();
+    if (!prompt) { addMsg('ai', 'Enter a prompt first.'); return; }
+    addMsg('user', prompt);
+    addTyping();
+
+    try {
+      const res = await fetch('/api/pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate_custom', prompt, method }),
+      });
+      removeTyping();
+
+      if (!res.ok) {
+        const err = await res.json();
+        addMsg('ai', 'Error: ' + (err.error || 'Unknown'));
+        return;
+      }
+
+      const data = await res.json();
+      const gen = data.result;
+      let imgHtml = '';
+      for (const [view, b64] of Object.entries(gen.images_b64 || {})) {
+        const src = `data:image/png;base64,${b64}`;
+        imgHtml += `<img class="msg-img" src="${src}" style="cursor:pointer;margin-top:8px" onclick="document.getElementById('modalImg').src=this.src;document.getElementById('imgModal').classList.add('on')">`;
+      }
+      const runDir = data.run_dir || '';
+      addMsg('ai', `${imgHtml}${runDir ? '<br><span style="color:#333;font-size:9px;letter-spacing:1px">SAVED → ' + runDir + '</span>' : ''}`);
+      document.getElementById('imgPrompt').value = '';
+    } catch(e) {
+      removeTyping();
+      addMsg('ai', 'Connection error — is server.py running?');
+    }
+  };
+
+  chatSend.addEventListener('click',sendChat);
+  chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')sendChat()});
+
+  // ── Pipeline ──
+  window.runPipeline = async function(action, opts={}) {
+    if(!buf) { addMsg('ai','Load an audio file first.'); return; }
+
+    const stageNames = {
+      predict: 'Stage 4 — Metadata Prediction',
+      interpret: 'Stage 5 — LLM Interpretation',
+      generate: 'Stage 6 — Image Generation',
+      full: 'Full Pipeline (4→5→6)',
+    };
+    addMsg('user', stageNames[action]);
+    addTyping();
+
+    // Build analysis object from current stats
+    const analysisData = {
+      file: document.getElementById('metaFile').textContent,
+      duration_sec: buf.duration,
+      sample_rate: buf.sampleRate,
+      channels: buf.numberOfChannels,
+      is_foa: buf.numberOfChannels === 4,
+      foa_directional: { dominant_direction: 'omnidirectional' },
+      onset_density: {
+        onset_count: 0,
+        onset_density_per_sec: parseFloat(document.getElementById('statOnset').textContent) || 0,
+      },
+      loudness: {
+        rms_mean: 0, rms_std: 0.05,
+        rms_db_mean: -25, rms_db_std: 10,
+        dynamic_range_db: parseFloat(document.getElementById('statDR').textContent) || 0,
+      },
+      spectral_entropy: {
+        spectral_entropy_mean: 0,
+        spectral_entropy_std: 0,
+        spectral_entropy_normalized: parseFloat(document.getElementById('statEntropy').textContent) || 0,
+        interpretation: (document.getElementById('statEntropyType').textContent || 'tonal').toLowerCase(),
+      },
+      band_energy: {
+        low_energy_ratio: 0.9,
+        mid_energy_ratio: 0.08,
+        high_energy_ratio: 0.02,
+        low_hz: '0-300', mid_hz: '300-2000', high_hz: '2000+',
+      },
+      reverberation: {
+        rt60_approx_sec: parseFloat(document.getElementById('statRT60').textContent) || 0,
+        decay_10_sec: 0,
+        drr_db: -10,
+        enclosure_estimate: (document.getElementById('statEnclosure').textContent || 'open').toLowerCase(),
+      },
+      motion: { error: 'Not FOA' },
+    };
+
+    try {
+      const res = await fetch('/api/pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, analysis: analysisData, ...opts }),
+      });
+      removeTyping();
+
+      if (!res.ok) {
+        const err = await res.json();
+        addMsg('ai', 'Error: ' + (err.error || 'Unknown error'));
+        return;
+      }
+
+      const data = await res.json();
+
+      if (action === 'predict' || (action === 'full' && data.metadata)) {
+        const m = data.result || data.metadata;
+        addMsg('ai',
+          `<b>Environment:</b> ${m.environment_type}<br>` +
+          `<b>Volatility:</b> ${m.volatility}<br>` +
+          `<b>Reverb:</b> ${m.acoustic_profile.reverberation}<br>` +
+          `<b>Density:</b> ${m.acoustic_profile.density}<br>` +
+          `<b>Openness:</b> ${m.acoustic_profile.openness}<br>` +
+          `<b>Sources:</b> ${m.source_objects.map(s=>s.type).join(', ')}`
+        );
+      }
+
+      if (action === 'interpret' || (action === 'full' && data.interpretation)) {
+        const interp = data.result || data.interpretation;
+        addMsg('ai',
+          `<b>Scene:</b> ${interp.scene_paragraph}<br><br>` +
+          `<b>Scale:</b> ${interp.spatial_scale}<br>` +
+          `<b>Light:</b> ${interp.lighting_condition}<br>` +
+          `<b>Materials:</b> ${interp.material_palette.join(', ')}<br><br>` +
+          `<b>Front prompt:</b> <i>${interp.prompts.front}</i>`
+        );
+      }
+
+      if (action === 'generate' || (action === 'full' && data.generation)) {
+        const gen = data.result || data.generation;
+        let imgHtml = '';
+        for (const [view, b64] of Object.entries(gen.images_b64 || {})) {
+          const src = `data:image/png;base64,${b64}`;
+          imgHtml += `<img class="msg-img" src="${src}" style="cursor:pointer;margin-top:8px" onclick="document.getElementById('modalImg').src=this.src;document.getElementById('imgModal').classList.add('on')"><div class="msg-label">${view}</div>`;
+        }
+        const runDir = data.run_dir || '';
+        addMsg('ai', `<b>Generated:</b> ${gen.method}<br>${imgHtml}${runDir?'<br><span style="color:#333;font-size:9px;letter-spacing:1px">SAVED → '+runDir+'</span>':''}`);
+      }
+
+    } catch(e) {
+      removeTyping();
+      addMsg('ai', 'Connection error — is server.py running?');
+    }
+  };
+});
+</script>
+</body>
+</html>

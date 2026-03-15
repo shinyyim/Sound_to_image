@@ -1,0 +1,32 @@
+# Audio I/O & Analysis
+soundfile>=0.12.1
+librosa>=0.10.1
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Audio Embeddings
+laion-clap>=1.1.6
+transformers>=4.36.0
+torch>=2.1.0
+torchaudio>=2.1.0
+
+# Visualization
+matplotlib>=3.8.0
+
+# Pipeline
+pyyaml>=6.0
+tqdm>=4.66.0
+
+# LLM Interpretation (stage 5)
+anthropic>=0.39.0
+
+# Image Generation (stage 6)
+# Uncomment below if using local SDXL generation (requires GPU)
+# diffusers>=0.25.0
+# accelerate>=0.25.0
+# Note: placeholder mode works with no extra dependencies.
+# Stability API mode only needs urllib (stdlib).
+
+# 3D Reconstruction (stage 7)
+# nerfstudio>=1.0.0
+# gsplat>=0.1.0
