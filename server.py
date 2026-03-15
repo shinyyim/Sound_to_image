@@ -434,9 +434,10 @@ if __name__ == "__main__":
     print(f"  ║  http://localhost:{PORT}{serve_path}  ║")
     print(f"  ╚══════════════════════════════════════╝\n")
 
-    server = http.server.HTTPServer(("", PORT), Handler)
-    import webbrowser
-    webbrowser.open(f"http://localhost:{PORT}{serve_path}")
+    server = http.server.HTTPServer(("0.0.0.0", PORT), Handler)
+    if not os.getenv("RAILWAY_ENVIRONMENT"):
+        import webbrowser
+        webbrowser.open(f"http://localhost:{PORT}{serve_path}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

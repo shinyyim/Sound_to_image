@@ -16,6 +16,8 @@ matplotlib>=3.8.0
 # Pipeline
 pyyaml>=6.0
 tqdm>=4.66.0
+python-dotenv>=1.0.0
+torchvision>=0.16.0
 
 # LLM Interpretation (stage 5)
 anthropic>=0.39.0
